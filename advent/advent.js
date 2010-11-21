@@ -467,7 +467,7 @@ C  YEA IS RANDOM YES/NO REPLY
 	 */
 	start: function() {
 		//            --------10--------20--------30--------40--------50--------60--------70
-		this.println("Welcome to the JavaScript-based port of the Collosal Cave Adventure!\n",
+		this.println("Welcome to the JavaScript-based port of the Colossal Cave Adventure!\n",
 					 "This is based on the original Adventure Fortran code, and (attempts)\n",
 					 "to stick to it as closely as possible, except where such a thing would\n",
 					 "be impossible.\n\n",
