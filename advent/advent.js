@@ -71,7 +71,7 @@ function Adventure(container) {
 	this._input.focus();
 }
 
-Adventure.VERSION = "0.0.6";
+Adventure.VERSION = "0.0.7";
 
 /*
  * QUICK NOTE ON ARRAY INDICES:
@@ -1231,7 +1231,7 @@ C  YEA IS RANDOM YES/NO REPLY
 		case 27: // READ
 			return this._read(wd1);
 		case 28: // BREK
-			throw this._break();
+			return this._break();
 		case 29: // WAKE
 			return this._wake();
 		default:
@@ -1315,9 +1315,8 @@ C  YEA IS RANDOM YES/NO REPLY
 		 * OLDLOC WILL BE WHAT KILLED HIM, SO WE NEED OLDLC2, WHICH IS THE LAST
 		 * PLACE HE WAS SAFE.)
 		 */
-		
 		// Label 8
-		if (this.loc < 0 || this.loc >= Adventure.TRAVEL_KEY.length)
+		if (this.loc < 1 || this.loc >= Adventure.TRAVEL_KEY.length)
 			this.bug(26);
 		// NOTE: kk is a 0-based index for once, not a 1-based index!
 		var kk = Adventure.TRAVEL_KEY[this.loc-1];
@@ -1962,7 +1961,6 @@ C  YEA IS RANDOM YES/NO REPLY
 	 * AND OTHERS (BIRD, CLAM).  AMBIGUOUS IF TWO ENEMIES, OR IF NO ENEMIES BUT
 	 * TWO OTHERS.
 	 */
-
 	_attack: function() {
 		// Label 9120
 		var i;
@@ -2059,28 +2057,29 @@ C  YEA IS RANDOM YES/NO REPLY
 		this.rspeak(49);
 		this.verb = 0;
 		this.obj = 0;
+		var self = this;
 		return this.getin(function(m) {
 			m = m.toUpperCase();
 			if (m != 'Y' && m != 'YES') {
 				// I *think* this is right for GOTO 2608.
-				return this._command(m);
+				return self._command(m);
 			}
-			this.pspeak(this.dragon, 1);
-			this.setProp(this.dragon, 2);
-			this.setProp(this.rug, 0);
-			var k = (Adventure.plac(this.dragon) + Adventure.fixd(this.dragon)) >> 1;
-			this.move(this.dragon+100, -1);
-			this.move(this.rug+100, 0);
-			this.move(this.dragon, k);
-			this.move(this.rug, k);
+			self.pspeak(self.dragon, 1);
+			self.setProp(self.dragon, 2);
+			self.setProp(self.rug, 0);
+			var k = (Adventure.plac(self.dragon) + Adventure.fixd(self.dragon)) >> 1;
+			self.move(self.dragon+100, -1);
+			self.move(self.rug+100, 0);
+			self.move(self.dragon, k);
+			self.move(self.rug, k);
 			for (var i = 1; i <= 100; i++) {
-				if (this.place[i-1] == Adventure.plac(this.dragon) ||
-					this.place[i-1] == Adventure.fixd(this.dragon)) {
-						this.move(i, k);
+				if (self.place[i-1] == Adventure.plac(self.dragon) ||
+					self.place[i-1] == Adventure.fixd(self.dragon)) {
+						self.move(i, k);
 				}
 			}
-			this.loc = k;
-			return this._motionVerb(k);
+			self.loc = k;
+			return self._motionVerb(k);
 		});
 	},
 	/**
