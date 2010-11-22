@@ -89,7 +89,20 @@ function Adventure(container) {
 	*/
 }
 
-Adventure.VERSION = "0.0.8";
+Adventure.VERSION = "0.0.9";
+
+// Default MOTD:
+
+//                   --------10--------20--------30--------40--------50--------60--------70
+Adventure['MOTD'] = "Welcome to the JavaScript-based port of the Colossal Cave Adventure!\n" +
+					"This is based on the original Adventure Fortran code, and (attempts)\n" +
+					"to stick to it as closely as possible, except where such a thing would\n" +
+					"be impossible.\n\n" +
+					"Port version: " + Adventure.VERSION + "\n\n" +
+					"NOTICE: I've yet to test a complete game, but the entire things is\n" +
+					"basically ported.\n\n" +
+					"So, without further useless text, let's go!\n\n" +
+					"$ advent";
 
 /*
  * QUICK NOTE ON ARRAY INDICES:
@@ -484,16 +497,6 @@ C  YEA IS RANDOM YES/NO REPLY
 	 * the cave is always open.
 	 */
 	start: function() {
-		//            --------10--------20--------30--------40--------50--------60--------70
-		this.println("Welcome to the JavaScript-based port of the Colossal Cave Adventure!\n",
-					 "This is based on the original Adventure Fortran code, and (attempts)\n",
-					 "to stick to it as closely as possible, except where such a thing would\n",
-					 "be impossible.\n\n",
-					 "Port version: ", Adventure.VERSION, "\n",
-					 "NOTICE: Well... everything *should* be in working order, I haven't\n",
-					 "*really* tested this...\n\n",
-					 "So, without further useless text, let's go!\n\n",
-					 "$ advent");
 		// Label 1
 		this.motd();
 		this.ran(1);
@@ -2643,7 +2646,7 @@ C  YEA IS RANDOM YES/NO REPLY
 	 * HOURS.  REPORT CURRENT NON-PRIME-TIME HOURS.
 	 */
 	_hours: function() {
-		this.mspeak(6);
+		this.speak("COLOSSAL CAVE IS OPEN TO REGULAR ADVENTURERS AT THE FOLLOWING HOURS:");
 		// Yeah, not an issue any more.
 		//            --------10--------20--------30--------40--------50--------60--------70
 		this.println("    Since this is a JavaScript application running on your own\n" +
@@ -3028,15 +3031,6 @@ C  YEA IS RANDOM YES/NO REPLY
 		this.speak(Adventure.RTEXT[i-1]);
 	},
 	/**
-	 * Print the i-th "magic" message.
-	 */
-	mspeak: function(i) {
-		if (i != 0) {
-			this.speak(Adventure.MTEXT[i-1]);
-		}
-	},
-
-	/**
 	 * This function is substantially different from the original Adventure
 	 * getin, since it has to get input from the user. Doing that within the
 	 * confines of a web app is a bit difficult, since we can't just block
@@ -3044,6 +3038,9 @@ C  YEA IS RANDOM YES/NO REPLY
 	 * words that the user typed.
 	 */
 	getin: function(callback) {
+		if (this.blklin) {
+			this.println();
+		}
 		this._callback = callback;
 	},
 /*
@@ -3105,12 +3102,6 @@ C  WORD2 (CHARS 6 THRU 10 IN WORD2X), ELSE WORD2 IS SET TO ZERO.
 	 */
 	yes: function(prompt, ifYes, ifNo, callback) {
 		this.yesx(prompt, ifYes, ifNo, this.rspeak, callback);
-	},
-	/**
-	 * CALL YESX (BELOW) WITH MESSAGES FROM SECTION 12.
-	 */
-	yesm: function(prompt, ifYes, ifNo, callback) {
-		this.yesm(prompt, ifYes, ifNo, this.mspeak, callback);
 	},
 	/**
 	 * This is yet another instance where we can't *quite* duplicate Adventure.
