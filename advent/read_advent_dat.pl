@@ -497,9 +497,10 @@ for ($i = 0; $i <= $#hints; $i++) {
 	}
 }
 
-print "\n];\n\n// Section 12:\nAdventure.MTEXT = [\n";
-
-dump_desc(\%mtext);
+# MSpeak is currently never used, so commenting it out.
+#print "\n];\n\n// Section 12:\nAdventure.MTEXT = [\n";
+#
+#dump_desc(\%mtext);
 
 print "\n];\n\n";
 print <<EOJS;
