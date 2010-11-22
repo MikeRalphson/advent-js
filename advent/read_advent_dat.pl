@@ -286,6 +286,17 @@ while (my $line = <ADVENT>) {
 	}
 }
 
+# Next up, we have to initialize all forced-movement rooms to have cond 2. So
+# go though the travel table and check for forced-movement
+
+my $i;
+my $j;
+
+for ($i = 0; $i <= $#travel_key; $i++) {
+	$j = $travel_key[$i];
+	$cond[$i] = 2 if (abs($travel[$j]) % 1000) == 1;
+}
+
 # Now that we're done, add in some custom additional vocab...
 # Allow Chirpy for the bird:
 $vocab_object{"CHIRP"} = $vocab_object{"BIRD"};
@@ -454,7 +465,7 @@ for my $c (@cond) {
 
 print "\n];\n\n// Section 10:\nAdventure.RANKS = [\n";
 
-for (my $i = 0; $i <= $#rank_pts; $i++) {
+for ($i = 0; $i <= $#rank_pts; $i++) {
 	if ($i > 0) {
 		print ",\n";
 	}
@@ -463,11 +474,10 @@ for (my $i = 0; $i <= $#rank_pts; $i++) {
 
 print "\n];\n\n// Section 11:\nAdventure.HINTS = [\n";
 
-my $j;
 my $hint;
 my $len;
 
-for (my $i = 0; $i <= $#hints; $i++) {
+for ($i = 0; $i <= $#hints; $i++) {
 	if ($i > 0) {
 		print ",\n";
 	}

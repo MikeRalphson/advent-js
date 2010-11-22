@@ -69,9 +69,27 @@ function Adventure(container) {
 		};
 	})(this);
 	this._input.focus();
+	// DWARF DEBUG JUNK
+	/*
+	var dwarfTab = document.createElement('div');
+	dwarfTab.style.position = 'fixed';
+	dwarfTab.style.right = '0';
+	dwarfTab.style.top = '0';
+	var html = ['<b>Dwarf Data</b><div>DFlag=</div><table><tr><th>Dwarf</th><th>Seen?</th><th>Loc</th><th>OldLoc</th></tr>'];
+	for (var i = 0; i < 6; i++) {
+		html.push('<tr><th>');
+		html.push(i == 5 ? 'Pirate' : 'Dwarf ' + (i + 1));
+		html.push('</th><td>-</td><td>-</td><td>-</td></tr>');
+	}
+	html.push('</table>');
+	dwarfTab.innerHTML = html.join('');
+	this._dflagDiv = dwarfTab.getElementsByTagName("DIV").item(0);
+	this._dwarfTable = dwarfTab.getElementsByTagName("TABLE").item(0);
+	document.body.appendChild(dwarfTab);
+	*/
 }
 
-Adventure.VERSION = "0.0.7";
+Adventure.VERSION = "0.0.8";
 
 /*
  * QUICK NOTE ON ARRAY INDICES:
@@ -517,6 +535,15 @@ C  YEA IS RANDOM YES/NO REPLY
 			}
 		}
 		this.loc = this.newloc;
+		// DWARF DEBUGGING
+		/*
+		for (var i = 0; i < 6; i++) {
+			this._dwarfTable.rows[i+1].cells[1].innerHTML = this.dseen[i];
+			this._dwarfTable.rows[i+1].cells[2].innerHTML = this.dloc[i];
+			this._dwarfTable.rows[i+1].cells[3].innerHTML = this.odloc[i];
+		}
+		this._dflagDiv.innerHTML = "DFlag=" + this.dflag;
+		*/
 		/*
 		 * DWARF STUFF.  SEE EARLIER COMMENTS FOR DESCRIPTION OF VARIABLES.  REMEMBER
 		 * SIXTH DWARF IS PIRATE AND IS THUS VERY DIFFERENT EXCEPT FOR MOTION RULES.
@@ -585,20 +612,27 @@ C  YEA IS RANDOM YES/NO REPLY
 				if (kk >= 0) {
 					// Label 6012
 					do {
-						this.newloc = (Math.floor(Math.abs(Adventure.TRAVEL[kk])/1000)) % 1000;
-						// This is one hell of an awful if statement, but I think it's
-						// correct from the original, assuming no weird Fortran order
-						// of operations.
-						if (this.newloc > 300 || this.newloc == 15 ||
-								this.newloc == this.odloc[i] ||
-								(j > 0 && this.newloc == this.tk[j-1]) || j > this.tk.length
-								|| this.newloc == this.dloc[i] || this.forced(this.newloc) ||
-								(i == 5 && this.bitset(this.newloc,3)) ||
-								Math.floor(Math.abs(Adventure.TRAVEL[kk])/1000000) == 100) {
-							// Not inverting the logic here
+						var newloc = (Math.floor(Math.abs(Adventure.TRAVEL[kk])/1000)) % 1000;
+						if (newloc == 0) {
+							this.println(" ---- UH OH ----");
+							this.println("Newloc for dwarf #", i+1, " is 0.");
+							this.println("Dwarf is currently in " + this.dloc[i] + ", kk=" + kk);
+							this.println("NOT MOVING DWARF TO AVOID CRASH!");
 						} else {
-							this.tk[j] = this.newloc;
-							j++;
+							// This is one hell of an awful if statement, but I think it's
+							// correct from the original, assuming no weird Fortran order
+							// of operations.
+							if (newloc > 300 || newloc == 15 ||
+									newloc == this.odloc[i] ||
+									(j > 0 && newloc == this.tk[j-1]) || j > this.tk.length
+									|| newloc == this.dloc[i] || this.forced(newloc) ||
+									(i == 5 && this.bitset(newloc,3)) ||
+									Math.floor(Math.abs(Adventure.TRAVEL[kk])/1000000) == 100) {
+								// Not inverting the logic here
+							} else {
+								this.tk[j] = newloc;
+								j++;
+							}
 						}
 						// Label 6014
 						kk++;
@@ -711,7 +745,7 @@ C  YEA IS RANDOM YES/NO REPLY
 			if (attack > 0) {
 				if (this.dflag == 2)
 					this.dflag = 3;
-				if (this.attack == 1) {
+				if (attack == 1) {
 					this.rspeak(5);
 					k = 52;
 				} else {
