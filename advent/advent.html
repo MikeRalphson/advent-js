@@ -1,13 +1,17 @@
+<!DOCTYPE html>
 <html>
 <head>
 <title>Colossal Cave Adventure</title>
+<!-- Do shut up, Firefox. -->
+<meta charset="UTF-8">
 <script type="text/javascript">
+var game; // To make it inspectable.
 function advent() {
 	var console = document.getElementById('console');
 	// Easy way to empty it:
 	console.innerHTML = '';
 	try {
-		var game = new Adventure(console);
+		game = new Adventure(console);
 		game.setup();
 		game.start();
 	} catch (ex) {

@@ -89,7 +89,7 @@ function Adventure(container) {
 	*/
 }
 
-Adventure.VERSION = "0.0.9";
+Adventure.VERSION = "0.0.9+";
 
 // Default MOTD:
 
@@ -269,6 +269,8 @@ Adventure.prototype = {
 		this._itemProps = [];
 		this.hintlc = new Array(Adventure.HINTS.length);
 		this.hinted = new Array(Adventure.HINTS.length);
+		// I think TK is just temp space and really needn't be kept around,
+		// but whatever.
 		this.tk = new Array(20);
 		this.dseen = new Array(6);
 		this.dloc = new Array(6);
@@ -431,7 +433,9 @@ Adventure.prototype = {
 		this.dseen = [ false, false, false, false, false, false ];
 		this.dflag = 0;
 		this.dloc = [ 19, 27, 33, 44, 64, this.chloc ];
-		this.odloc = new Array(6);
+		// Initalize odloc to 0 - apparently it's initially "garbage" but 0
+		// works better for saving it.
+		this.odloc = [0,0,0,0,0,0];
 		this.daltlc = 18;
 		/*
 		 * OTHER RANDOM FLAGS AND COUNTERS, AS FOLLOWS:
@@ -482,7 +486,8 @@ Adventure.prototype = {
 		this.panic = false;
 		this.closed = false;
 		this.gaveup = false;
-		this.scorng = false;
+		// Never used
+		//this.scorng = false;
 		this.wizard = false;
 	},
 	/**
@@ -493,6 +498,11 @@ Adventure.prototype = {
 	start: function() {
 		// Label 1
 		this.motd();
+		// Added:
+		// Maybe resume the game if there is save information present...
+		if (this._resume()) {
+			this._nextTurn();
+		}
 		this.ran(1);
 		this.oldloc = 1;
 		this.loc = 1;
@@ -990,6 +1000,10 @@ Adventure.prototype = {
 				this._undoTaunt = true;
 				this.speak("What do you think this is, the Inform port?");
 			}
+			return this._getCommand();
+		}
+		if (wd1 == 'RESUME' || wd1 == 'RESTORE' || wd1 == 'LOAD' || wd1 == 'RELOAD') {
+			this.speak("Restore by loading the URL you were given when you saved.");
 			return this._getCommand();
 		}
 		if (this.wizard && wd1 == 'FIND' && wd2 == 'EVERYTHING') {
@@ -2629,12 +2643,82 @@ Adventure.prototype = {
 	_suspend: function() {
 		// Label 8300
 		// Never a demo, so never say 201
+		// The original just dumped the core image and then reloaded it.
 		//          --------10--------20--------30--------40--------50--------60--------70
-		this.speak(" Suspending the game isn't implemented.  Just leave the tab open.\n" +
-			       " Obviously not the best solution, but you'll have to live it for\n" +
-			       " now. I will get around to implementing saving eventually, it will\n" +
-			       " be implemented as either a browser cookie or a bookmark.");
+		this.speak(" Warning: suspending the game is currently still an \"alpha\" feature\n" +
+		           " and may not work entirely correctly. Future versions of the game may\n" +
+		           " not support reloading older saves. Sorry!\n\n" +
+		           " Bookmark this like to save your progress:\n");
+		var d = document.createElement('div');
+		d.innerHTML = ' <a href="#' + this._createSaveString() + '">Adventure! ' + this.turns + ' turns, ' + this._score() + ' points</a>';
+		this._console.appendChild(d);
 		return this._getCommand();
+	},
+	/**
+	 * Create a string that represents the current game state.
+	 */
+	_createSaveString: function() {
+		// Item props may contain nulls, which are effectively 0. Convert them
+		// now.
+		for (var i = 0; i < this._itemProps.length; i++) {
+			if (this._itemProps[i] == null)
+				this._itemProps[i] = 0;
+		}
+		var state = [];
+		// Go through the variables and save them.
+		for (var v in Adventure.SAVE_STATE) {
+			state[v] = Adventure.SAVE_STATE[v].encode(this[v]);
+		}
+		// Convert the state to a URL string
+		var rv = [];
+		for (var k in state) {
+			var v = state[k];
+			var t = typeof v;
+			rv.push(encodeURIComponent(k)+'='+encodeURIComponent(t == 'object' ? JSON.stringify(v) : v));
+		}
+		return rv.join('&');
+	},
+	_resume: function() {
+		var hash = location.hash;
+		if (hash.length <= 1) {
+			return false;
+		}
+		if (hash.charAt(0) == '#')
+			hash = hash.substring(1);
+		if (hash.length < 1)
+			return false;
+		try {
+			this._restoreGameState(hash);
+			return true;
+		} catch (ex) {
+			console.log(ex);
+			this.speak("Error restoring game state: " + ex.message);
+			return false;
+		}
+	},
+	/**
+	 * Restore the game state stored in a string as created by _createSaveString.
+	 */
+	_restoreGameState: function(str) {
+		var params = str.split(/[&;]/), state = {};
+		for (var i = 0; i < params.length; i++) {
+			var idx = params[i].indexOf('='), k, v='';
+			if (idx < 0)
+				k = params[i];
+			else {
+				k = params[i].substr(0, idx);
+				v = params[i].substr(idx+1);
+			}
+			console.log(" [" + k + "]=[" + v + "]");
+			state[k] = v;
+		}
+		// See if we understand this
+		// Go through the variables and restore them.
+		for (var v in Adventure.SAVE_STATE) {
+			if (!v in state)
+				throw Error("State is missing " + v + " which is required to restore it");
+			this[v] = Adventure.SAVE_STATE[v].decode(state[v]);
+		}
 	},
 	/**
 	 * HOURS.  REPORT CURRENT NON-PRIME-TIME HOURS.
@@ -2929,6 +3013,11 @@ Adventure.prototype = {
 			if (this.hinted[i]) {
 				score -= Adventure.HINTS[i][1];
 			}
+		}
+
+		if (arguments.length == 0) {
+			// Don't print anything if we're called with no arguments.
+			return score;
 		}
 
 		// THAT SHOULD BE GOOD ENOUGH.  LET'S TELL HIM ALL ABOUT IT.
@@ -3294,4 +3383,308 @@ Adventure.prototype = {
 		}
 		throw Error('Fatal error: ' + m);
 	}
+}
+
+/*
+ * Save utility functions.
+ */
+
+var NUMERIC_ARRAY = {
+	encode: encodeNumericArray,
+	decode: decodeNumericArray
+}, BOOLEAN_ARRAY = {
+	encode: encodeBooleanArray,
+	decode: decodeBooleanArray
+}, NUMBER = {
+	encode: encodeNumber,
+	decode: decodeNumber
+}, BOOLEAN = {
+	encode: encodeBoolean,
+	decode: decodeBoolean
+};
+
+/**
+ * A list of variables and how to save them.
+ */
+Adventure.SAVE_STATE = {
+	"abb": NUMERIC_ARRAY,
+	"abbnum": NUMBER,
+	"atloc": NUMERIC_ARRAY,
+	"detail": NUMBER,
+	"fixed": NUMERIC_ARRAY,
+	"_itemProps": NUMERIC_ARRAY,
+	"link": NUMERIC_ARRAY,
+	"obj": NUMBER,
+	"oldloc": NUMBER,
+	"place": NUMERIC_ARRAY,
+	"wzdark": BOOLEAN,
+	"limit": NUMBER,
+	"tally": NUMBER,
+	"tally2": NUMBER,
+	"hinted": BOOLEAN_ARRAY,
+	"hintlc": NUMERIC_ARRAY,
+	"dflag": NUMBER,
+	"dloc": NUMERIC_ARRAY,
+	"dseen": BOOLEAN_ARRAY,
+	"odloc": NUMERIC_ARRAY,
+	"turns": NUMBER,
+	"lmwarn": BOOLEAN,
+	"iwest": NUMBER,
+	"knfloc": NUMBER,
+	"detail": NUMBER,
+	"numdie": NUMBER,
+	"holdng": NUMBER,
+	"dkill": NUMBER,
+	"foobar": NUMBER,
+	"bonus": NUMBER,
+	"clock1": NUMBER,
+	"clock2": NUMBER,
+	"closng": BOOLEAN,
+	"panic": BOOLEAN,
+	"closed": BOOLEAN,
+	"gaveup": BOOLEAN,
+	"wizard": BOOLEAN,
+	"loc": NUMBER
+};
+/**
+ * Run-length encode an array. Requires all values be strings, numbers, booleans,
+ * or null. (Not checked and not enforced.)
+ */
+function runLengthEncode(a) {
+	if (a.length == 0) {
+		return a;
+	}
+	// First we run-length-encode the array...
+	var rv = [];
+	var currentValue = a[0];
+	var currentRun = 1;
+	function appendResult() {
+		if (currentRun == 1) {
+			rv.push(currentValue);
+			return;
+		}
+		if (currentRun == 2) {
+			// Special case: we may or may not decide to RLE this. If the
+			// string form is shorter than three characters, we don't.
+			if (currentValue != null && currentValue.toString().length < 3) {
+				rv.push(currentValue,currentValue);
+				return;
+			}
+			// Otherwise, fall through and push the run
+		}
+		rv.push([currentRun,currentValue]);
+	}
+	for (var i = 1; i < a.length; i++) {
+		if (a[i] == currentValue) {
+			currentRun++;
+		} else {
+			appendResult();
+			currentRun = 1;
+			currentValue = a[i];
+		}
+	}
+	appendResult();
+	return rv;
+}
+
+/**
+ * Encodes a numeric array into a string.
+ */
+function encodeNumericArray(array) {
+	// First, go through the array and see what the max value is. If the range
+	// is 0-61, we can use single-character encoding. If it's 0-3844, we can use
+	// two-character encoding.
+	var min = Math.min.apply(null,array);
+	var max = Math.max.apply(null,array);
+	var bump = min < 0 ? -min : 0;
+	max += bump;
+	// Next, through it through the RLE-er
+	array = runLengthEncode(array);
+	var rv = [];
+	if (max < 62) {
+		if (bump > 0) {
+			rv.push('-');
+			rv.push(encodeDigit(bump));
+		}
+		// Use single-character encoding (don't prepend anything)
+		for (var i = 0; i < array.length; i++) {
+			var v = array[i];
+			if (v.push) {
+				// Is a run
+				rv.push('.');
+				rv.push(encodeLargeDigit(v[0]));
+				v = v[1];
+			}
+			rv.push(encodeDigit(v+bump));
+		}
+	} else {
+		if (bump > 0) {
+			rv.push('-');
+			rv.push(encodeDigit(bump));
+		}
+		rv.push('_');
+		for (var i = 0; i < array.length; i++) {
+			var v = array[i];
+			if (v.push) {
+				// Is a run
+				rv.push('.');
+				rv.push(encodeLargeDigit(v[0]));
+				v = v[1];
+			}
+			v += bump;
+			var high = Math.floor(v/62);
+			var low = v%62;
+			rv.push(encodeDigit(high), encodeDigit(low));
+		}
+	}
+	return rv.join('');
+}
+
+function decodeNumericArray(str) {
+	// Peak at the first character, see if we have a bump
+	var bump = 0;
+	if (str.charAt(0) == '-') {
+		// Read the bump value
+		bump = decodeDigit(str.charAt(1));
+		// And chop this part off the string
+		str = str.substr(2);
+	}
+	var arr = [], i = 0, c, v, r, codeLen = 1, decode = decodeDigit;
+	// Look at the first character again, see if we're in "big digit" mode
+	if (str.charAt(0) == '_') {
+		// "Big digit" encoding.
+		decode = decodeLargeDigit;
+		codeLen = 2;
+		i++;
+	}
+	for (; i < str.length; i+=codeLen) {
+		// First see if this is a run
+		if (str.charAt(i) == '.') {
+			// Is a run, decode run length:
+			r = decodeLargeDigit(str.substr(++i,2));
+			// And advance past the run length characters, and proceed as
+			// normal to decode the next digit
+			i+=2;
+		} else {
+			r = 1;
+		}
+		v = decode(str.substr(i,codeLen)) - bump;
+		// And add to the array
+		for (; r > 0; r--) {
+			arr.push(v);
+		}
+	}
+	return arr;
+}
+
+function runLengthDecode(a) {
+	var rv = [];
+	for (var i = 0; i < a.length; i++) {
+		var v = a[i];
+		if (typeof v.push == 'function') {
+			// Decode run
+			for (var j = 0; j < v[0]; j++) {
+				rv.push(v[1]);
+			}
+		} else {
+			rv.push(v);
+		}
+	}
+	return rv;
+}
+
+function encodeLargeDigit(v) {
+	var high = Math.floor(v/62);
+	var low = v%62;
+	return encodeDigit(high) + encodeDigit(low);
+}
+
+function encodeDigit(d) {
+	if (d < 10) {
+		return String.fromCharCode(0x30+d);
+	} else if (d < 36) {
+		return String.fromCharCode(0x41-10+d);
+	} else if (d < 62) {
+		return String.fromCharCode(0x61-36+d);
+	} else {
+		return "!" + d + "!";
+		//throw Error("Value " + d + " is out of range.");
+	}
+}
+
+function decodeDigit(c) {
+	c = c.charCodeAt(0);
+	if (c >= 0x61) {
+		return c - 0x61 + 36;
+	} else if (c >= 0x41) {
+		return c - 0x41 + 10;
+	} else {
+		return c - 0x30;
+	}
+}
+
+function decodeLargeDigit(s) {
+	return decodeDigit(s.charAt(0)) * 62 + decodeDigit(s.charAt(1));
+}
+
+function encodeNumber(n) {
+	if (n < 62) {
+		return encodeDigit(n);
+	} else {
+		return encodeLargeDigit(n);
+	}
+}
+
+function decodeNumber(s) {
+	if (s.length == 1)
+		return decodeDigit(s);
+	else if (s.length == 2)
+		return decodeLargeDigit(s);
+	else
+		throw Error("Cannot decode \"" + s + "\"");
+}
+
+function encodeBooleanArray(array) {
+	// Again, RLE this first...
+	array = runLengthEncode(array);
+	// And then go ahead and encode the entire thing
+	var rv = [];
+	for (var i = 0; i < array.length; i++) {
+		var v = array[i];
+		if (v === true) {
+			rv.push('.');
+		} else if (v === false) {
+			rv.push('-');
+		} else {
+			rv.push(encodeDigit(v[0]), encodeBoolean(v[1]));
+		}
+	}
+	return rv.join('');
+}
+
+function encodeBoolean(v) {
+	return v ? '.' : '_';
+}
+function decodeBoolean(c) {
+	return (c == '.' ? true : (c == '_' ? false : null));
+}
+
+function decodeBooleanArray(str) {
+	var arr = [], i, c, v, r;
+	// Go through the string
+	for (i = 0; i < str.length; i++) {
+		c = str.charAt(i);
+		v = decodeBoolean(c);
+		if (v === null) {
+			// Note that we preincrement i to get the next character, so on the
+			// next loop we're looking at the correct character.
+			v = decodeBoolean(str.charAt(++i));
+			for (r = decodeDigit(c); r > 0; r--) {
+				arr.push(v);
+			}
+		} else {
+			arr.push(v);
+		}
+	}
+	return arr;
 }
