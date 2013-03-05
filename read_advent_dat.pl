@@ -300,7 +300,8 @@ for ($i = 0; $i <= $#travel_key; $i++) {
 # Now that we're done, add in some custom additional vocab...
 # Allow Chirpy for the bird:
 $vocab_object{"CHIRP"} = $vocab_object{"BIRD"};
-# (Due to http://forums.somethingawful.com/showthread.php?threadid=3357967)
+# (Due to http://forums.somethingawful.com/showthread.php?threadid=3357967,
+# also in the LP archive at http://lparchive.org/Adventure/)
 
 print "// Auto-generated data from ADVENT.DAT.\n";
 
