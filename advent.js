@@ -501,7 +501,7 @@ Adventure.prototype = {
 		// Added:
 		// Maybe resume the game if there is save information present...
 		if (this._resume()) {
-			this._nextTurn();
+			return this._nextTurn();
 		}
 		this.ran(1);
 		this.oldloc = 1;
@@ -2667,7 +2667,7 @@ Adventure.prototype = {
 		var state = [];
 		// Go through the variables and save them.
 		for (var v in Adventure.SAVE_STATE) {
-			state[v] = Adventure.SAVE_STATE[v].encode(this[v]);
+			state[Adventure.SAVE_STATE[v][1]] = Adventure.SAVE_STATE[v][0].encode(this[v]);
 		}
 		// Convert the state to a URL string
 		var rv = [];
@@ -2712,13 +2712,21 @@ Adventure.prototype = {
 			console.log(" [" + k + "]=[" + v + "]");
 			state[k] = v;
 		}
-		// See if we understand this
+		// Check the version marker
+		if (!('_' in state)) {
+			throw Error("Missing version marker.");
+		} else if (state['_'] != '0') {
+			throw Error("Unknown version \"" + state['_'] + "\", cannot restore this game.");
+		}
 		// Go through the variables and restore them.
 		for (var v in Adventure.SAVE_STATE) {
-			if (!v in state)
-				throw Error("State is missing " + v + " which is required to restore it");
-			this[v] = Adventure.SAVE_STATE[v].decode(state[v]);
+			var k = Adventure.SAVE_STATE[v][1];
+			if (!k in state)
+				throw Error("State is missing " + k + " (" + v + ") which is required to restore it");
+			this[v] = Adventure.SAVE_STATE[v][0].decode(state[k]);
 		}
+		// Newloc should always be the same as loc - I think
+		this.newloc = this.loc;
 	},
 	/**
 	 * HOURS.  REPORT CURRENT NON-PRIME-TIME HOURS.
@@ -3383,69 +3391,84 @@ Adventure.prototype = {
 		}
 		throw Error('Fatal error: ' + m);
 	}
-}
+};
 
 /*
  * Save utility functions.
  */
 
-var NUMERIC_ARRAY = {
-	encode: encodeNumericArray,
-	decode: decodeNumericArray
-}, BOOLEAN_ARRAY = {
-	encode: encodeBooleanArray,
-	decode: decodeBooleanArray
-}, NUMBER = {
-	encode: encodeNumber,
-	decode: decodeNumber
-}, BOOLEAN = {
-	encode: encodeBoolean,
-	decode: decodeBoolean
-};
+(function() {
+	// Save types - ways to encode local variables. I suppose this could also be
+	// done by actually inspecting the values, but whatever.
+	var NUMERIC_ARRAY = {
+		encode: encodeNumericArray,
+		decode: decodeNumericArray
+	}, BOOLEAN_ARRAY = {
+		encode: encodeBooleanArray,
+		decode: decodeBooleanArray
+	}, NUMBER = {
+		encode: encodeNumber,
+		decode: decodeNumber
+	}, BOOLEAN = {
+		encode: encodeBoolean,
+		decode: decodeBoolean
+	};
+	
+	/**
+	 * A list of variables and how to save them.
+	 */
+	Adventure.SAVE_STATE = {
+		"abb": NUMERIC_ARRAY,
+		"abbnum": NUMBER,
+		"atloc": NUMERIC_ARRAY,
+		"bonus": NUMBER,
+		"clock1": NUMBER,
+		"clock2": NUMBER,
+		"closed": BOOLEAN,
+		"closng": BOOLEAN,
+		"detail": NUMBER,
+		"fixed": NUMERIC_ARRAY,
+		"_itemProps": NUMERIC_ARRAY,
+		"link": NUMERIC_ARRAY,
+		"obj": NUMBER,
+		"oldloc": NUMBER,
+		"place": NUMERIC_ARRAY,
+		"wzdark": BOOLEAN,
+		"limit": NUMBER,
+		"tally": NUMBER,
+		"tally2": NUMBER,
+		"hinted": BOOLEAN_ARRAY,
+		"hintlc": NUMERIC_ARRAY,
+		"dflag": NUMBER,
+		"dkill": NUMBER,
+		"dloc": NUMERIC_ARRAY,
+		"dseen": BOOLEAN_ARRAY,
+		"odloc": NUMERIC_ARRAY,
+		"turns": NUMBER,
+		"lmwarn": BOOLEAN,
+		"iwest": NUMBER,
+		"knfloc": NUMBER,
+		"detail": NUMBER,
+		"numdie": NUMBER,
+		"holdng": NUMBER,
+		"foobar": NUMBER,
+		"panic": BOOLEAN,
+		"gaveup": BOOLEAN,
+		"wizard": BOOLEAN,
+		"loc": NUMBER
+	};
+	// Go through the save states and create "short" names for them.
+	var d = 0;
+	for (var v in Adventure.SAVE_STATE) {
+		Adventure.SAVE_STATE[v] = [ Adventure.SAVE_STATE[v], encodeDigit(d++) ];
+	}
+	// And throw in the special version marker.
+	Adventure.SAVE_STATE['version'] = [ {
+		encode: function(i) { return 0; },
+		decode: function(v) { if (v != '0') { throw Error("Bad save version"); } }
+	}, '_' ];
+})();
 
-/**
- * A list of variables and how to save them.
- */
-Adventure.SAVE_STATE = {
-	"abb": NUMERIC_ARRAY,
-	"abbnum": NUMBER,
-	"atloc": NUMERIC_ARRAY,
-	"detail": NUMBER,
-	"fixed": NUMERIC_ARRAY,
-	"_itemProps": NUMERIC_ARRAY,
-	"link": NUMERIC_ARRAY,
-	"obj": NUMBER,
-	"oldloc": NUMBER,
-	"place": NUMERIC_ARRAY,
-	"wzdark": BOOLEAN,
-	"limit": NUMBER,
-	"tally": NUMBER,
-	"tally2": NUMBER,
-	"hinted": BOOLEAN_ARRAY,
-	"hintlc": NUMERIC_ARRAY,
-	"dflag": NUMBER,
-	"dloc": NUMERIC_ARRAY,
-	"dseen": BOOLEAN_ARRAY,
-	"odloc": NUMERIC_ARRAY,
-	"turns": NUMBER,
-	"lmwarn": BOOLEAN,
-	"iwest": NUMBER,
-	"knfloc": NUMBER,
-	"detail": NUMBER,
-	"numdie": NUMBER,
-	"holdng": NUMBER,
-	"dkill": NUMBER,
-	"foobar": NUMBER,
-	"bonus": NUMBER,
-	"clock1": NUMBER,
-	"clock2": NUMBER,
-	"closng": BOOLEAN,
-	"panic": BOOLEAN,
-	"closed": BOOLEAN,
-	"gaveup": BOOLEAN,
-	"wizard": BOOLEAN,
-	"loc": NUMBER
-};
 /**
  * Run-length encode an array. Requires all values be strings, numbers, booleans,
  * or null. (Not checked and not enforced.)
