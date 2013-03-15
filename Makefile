@@ -5,8 +5,9 @@ dat: advent_dat.js
 advent_dat.js: read_advent_dat.pl advent.dat
 	./read_advent_dat.pl > advent_dat.js
 
-advent-min.js: advent.js advent_dat.js advent_cc.js
-	java -jar closure-compiler/compiler.jar --js advent.js --js advent_dat.js --js advent_cc.js --js_output_file advent-min.js --compilation_level ADVANCED_OPTIMIZATIONS
+advent-min.js: advent.js advent_save.js advent_dat.js advent_cc.js
+	java -jar closure-compiler/compiler.jar --js advent.js --js advent_save.js --js advent_dat.js --js advent_cc.js --js_output_file advent-min.js --compilation_level ADVANCED_OPTIMIZATIONS
+	gzip -c advent-min.js > advent-min.js.gz
 
 clean:
 	rm -f advent_dat.js advent-min.js
